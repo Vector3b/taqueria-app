@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbxruKhiJN04_W3khNjGO_VnaSXqDOqnfqJ8Gatq4pfuzxVUBVdfcspuL1Cf-CqZsQP0AQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbziH_igDH8yL33JhUWP63Gi6-ob_PQlO3ObkaltkeV2w9IwjJj6la4NAEYDUFs6b8vYaA/exec';
 const CLAVE_API = 'tq_9f3K7xR2mZ8pL4vN6qWs1';
 const PRECIO_QUESO_EXTRA = 10;
 
