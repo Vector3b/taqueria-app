@@ -475,7 +475,7 @@ export default function App() {
 
   if (!autenticado) {
     return (
-      <div style={{ maxWidth: 320, margin: '80px auto', padding: 20, fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: 400, margin: '80px auto', padding: 20, fontFamily: 'sans-serif' }}>
         <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 16, textAlign: 'center' }}>Acceso</div>
         <input
           placeholder="Usuario"
@@ -506,7 +506,7 @@ export default function App() {
   if (rolActivo === 'admin') {
     const esHoy = fechaSeleccionada === hoyString();
     return (
-      <div style={{ maxWidth: 520, margin: '0 auto', padding: 16, fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: 700, margin: '0 auto', padding: 16, fontFamily: 'sans-serif' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 13, color: '#666' }}>Sesión: {usuarioActivo} (administrador)</span>
           <button onClick={cerrarSesion} style={{ fontSize: 12, border: 'none', background: 'none', color: '#c0392b' }}>Cerrar sesión</button>
@@ -600,7 +600,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: 16, paddingBottom: 90, fontFamily: 'sans-serif', position: 'relative' }}>
+    <div style={{ maxWidth: 700, margin: '0 auto', padding: 20, paddingBottom: 90, fontFamily: 'sans-serif', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontSize: 13, color: '#666' }}>Sesión: {usuarioActivo}</span>
         <button onClick={cerrarSesion} style={{ fontSize: 12, border: 'none', background: 'none', color: '#c0392b' }}>Cerrar sesión</button>
@@ -694,7 +694,7 @@ export default function App() {
           })()}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
           {productosVisibles.map(producto => {
             const clave = claveItem(producto.id, comensalActivo);
             const cantidad = carrito[clave] || 0;
@@ -821,7 +821,7 @@ export default function App() {
 
       {modalResumenAbierto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: 20, maxWidth: 480, width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: 20, maxWidth: 700, width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ fontWeight: 600, fontSize: 17 }}>Resumen de la orden {mesa ? `· ${mesa}` : ''}</div>
               <button onClick={() => setModalResumenAbierto(false)} style={{ border: 'none', background: 'none', fontSize: 20, color: '#666' }}>✕</button>
