@@ -325,8 +325,7 @@ export default function App() {
     const n = notasProducto[clave] || {};
     const partes = [];
     if (n.conVerdura) partes.push('con verdura');
-    if (n.sinCilantro) partes.push('sin cilantro');
-    if (n.conCilantro) partes.push('con cilantro');
+    if (n.sinVerdura) partes.push('sin verdura');
     if (conQueso) partes.push('queso extra');
     if (n.libre) partes.push(n.libre);
     return partes.join(', ');
@@ -746,26 +745,16 @@ export default function App() {
                         Con verdura
                       </button>
                       <button
-                        onClick={() => toggleNota(clave, 'sinCilantro')}
+                        onClick={() => toggleNota(clave, 'sinVerdura')}
                         style={{
                           fontSize: 11, padding: '6px 4px', borderRadius: 6,
-                          border: n.sinCilantro ? '2px solid #b5651d' : '1px solid #ccc',
-                          background: n.sinCilantro ? '#fbe9d9' : '#fafafa'
+                          border: n.sinVerdura ? '2px solid #b5651d' : '1px solid #ccc',
+                          background: n.sinVerdura ? '#fbe9d9' : '#fafafa'
                         }}
                       >
-                        Sin cilantro
+                        Sin verdura
                       </button>
                     </div>
-                    <button
-                      onClick={() => toggleNota(clave, 'conCilantro')}
-                      style={{
-                        fontSize: 11, padding: '6px 4px', borderRadius: 6, width: '100%', marginTop: 4,
-                        border: n.conCilantro ? '2px solid #b5651d' : '1px solid #ccc',
-                        background: n.conCilantro ? '#fbe9d9' : '#fafafa'
-                      }}
-                    >
-                      Con cilantro
-                    </button>
                     <button
                       onClick={() => pedirNotaLibre(clave)}
                       title="Agregar nota escrita"
