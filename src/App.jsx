@@ -341,12 +341,15 @@ export default function App() {
 
   function agregarCombinado() {
     if (carnesSeleccionadas.length !== 2) return;
+    const claveCombo = 'combo-' + productoCombinado.id + '__' + comensalActivo;
+    const conQueso = !!quesoExtra[claveCombo];
     setCombos(prev => [...prev, {
       idLinea: Date.now(),
       producto: productoCombinado,
       carnes: [...carnesSeleccionadas],
-      conQueso: !!quesoExtra['combo-' + productoCombinado.id + '__' + comensalActivo],
-      comensal: comensalActivo
+      conQueso,
+      comensal: comensalActivo,
+      notasExtra: construirNotas(claveCombo, false)
     }]);
     setCarnesSeleccionadas([]);
     setModalAbierto(false);
@@ -415,7 +418,7 @@ export default function App() {
           producto_id: c.producto.id,
           cantidad: 1,
           conQueso: c.conQueso,
-          notas: `Cliente ${c.comensal}: ` + c.carnes.join(' + ') + (c.conQueso ? ' + queso extra' : '')
+          notas: `Cliente ${c.comensal}: ` + c.carnes.join(' + ') + (c.conQueso ? ' + queso extra' : '') + (c.notasExtra ? `, ${c.notasExtra}` : '')
         })),
         ...especiales.map(e => ({
           producto_id: e.producto.id,
@@ -919,7 +922,10 @@ export default function App() {
         </div>
       )}
 
-      {modalAbierto && (
+      {modalAbierto && (() => {
+        const claveCombo = 'combo-' + productoCombinado?.id + '__' + comensalActivo;
+        const nCombo = notasProducto[claveCombo] || {};
+        return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 20, maxWidth: 400, width: '100%' }}>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>Elige 2 carnes para tu {productoCombinado?.nombre}</div>
@@ -954,6 +960,43 @@ export default function App() {
                 Extra queso (+${PRECIO_QUESO_EXTRA})
               </label>
             )}
+
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                <button
+                  onClick={() => toggleNota(claveCombo, 'conVerdura')}
+                  style={{
+                    fontSize: 11, padding: '6px 4px', borderRadius: 6,
+                    border: nCombo.conVerdura ? '2px solid #b5651d' : '1px solid #ccc',
+                    background: nCombo.conVerdura ? '#fbe9d9' : '#fafafa'
+                  }}
+                >
+                  Con verdura
+                </button>
+                <button
+                  onClick={() => toggleNota(claveCombo, 'sinVerdura')}
+                  style={{
+                    fontSize: 11, padding: '6px 4px', borderRadius: 6,
+                    border: nCombo.sinVerdura ? '2px solid #b5651d' : '1px solid #ccc',
+                    background: nCombo.sinVerdura ? '#fbe9d9' : '#fafafa'
+                  }}
+                >
+                  Sin verdura
+                </button>
+              </div>
+              <button
+                onClick={() => pedirNotaLibre(claveCombo)}
+                title="Agregar nota escrita"
+                style={{
+                  fontSize: 13, fontWeight: 600, padding: '4px 0', borderRadius: 6, width: '100%', marginTop: 4,
+                  border: nCombo.libre ? '2px solid #2b7a3f' : '1px dashed #999',
+                  background: nCombo.libre ? '#eaf5ec' : '#fff', color: nCombo.libre ? '#2b7a3f' : '#666'
+                }}
+              >
+                {nCombo.libre ? `✓ ${nCombo.libre}` : '+ nota'}
+              </button>
+            </div>
+
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button
                 onClick={() => { setModalAbierto(false); setCarnesSeleccionadas([]); }}
@@ -971,7 +1014,8 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {modalEspecialAbierto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
