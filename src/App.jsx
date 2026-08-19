@@ -359,6 +359,26 @@ export default function App() {
     setCombos(prev => prev.filter(c => c.idLinea !== idLinea));
   }
 
+  function duplicarCombo(idLinea) {
+    const original = combos.find(c => c.idLinea === idLinea);
+    if (!original) return;
+    setCombos(prev => [...prev, { ...original, idLinea: Date.now() + Math.random() }]);
+  }
+
+  function agruparCombos(lista) {
+    const grupos = [];
+    lista.forEach(c => {
+      const firma = c.producto.id + '|' + [...c.carnes].sort().join(',') + '|' + (c.conQueso ? '1' : '0') + '|' + (c.notasExtra || '');
+      let grupo = grupos.find(g => g.firma === firma);
+      if (!grupo) {
+        grupo = { firma, muestra: c, idLineas: [] };
+        grupos.push(grupo);
+      }
+      grupo.idLineas.push(c.idLinea);
+    });
+    return grupos;
+  }
+
   function agregarEspecial() {
     if (!tacoElegido) return;
     setEspeciales(prev => [...prev, {
@@ -852,12 +872,24 @@ export default function App() {
                     </div>
                   ))}
 
-                  {combosDeEste.map(c => (
-                    <div key={c.idLinea} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #eee' }}>
-                      <span>{c.producto.nombre}: {c.carnes.join(' + ')}{c.conQueso ? ' + queso' : ''} · ${c.producto.precio + (c.conQueso ? PRECIO_QUESO_EXTRA : 0)}</span>
-                      <button onClick={() => quitarCombo(c.idLinea)} style={{ border: 'none', background: 'none', color: '#c0392b', fontSize: 12 }}>Eliminar</button>
-                    </div>
-                  ))}
+                  {agruparCombos(combosDeEste).map(grupo => {
+                    const c = grupo.muestra;
+                    const cantidad = grupo.idLineas.length;
+                    const precioUnitario = c.producto.precio + (c.conQueso ? PRECIO_QUESO_EXTRA : 0);
+                    return (
+                      <div key={grupo.firma} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #eee' }}>
+                        <span>
+                          {c.producto.nombre}: {c.carnes.join(' + ')}{c.conQueso ? ' + queso' : ''} · ${precioUnitario * cantidad}
+                          {c.notasExtra && <div style={{ fontSize: 12, color: '#888' }}>{c.notasExtra}</div>}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <button onClick={() => quitarCombo(grupo.idLineas[grupo.idLineas.length - 1])} style={{ width: 24, height: 24 }}>-</button>
+                          <span>{cantidad}</span>
+                          <button onClick={() => duplicarCombo(grupo.idLineas[0])} style={{ width: 24, height: 24 }}>+</button>
+                        </div>
+                      </div>
+                    );
+                  })}
 
                   {especialesDeEste.map(e => (
                     <div key={e.idLinea} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #eee' }}>
