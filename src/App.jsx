@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbziH_igDH8yL33JhUWP63Gi6-ob_PQlO3ObkaltkeV2w9IwjJj6la4NAEYDUFs6b8vYaA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwNfZhDTvvRh_Wmar9D7hZ_BfJtTQHbFuivN2wh3auLHD11x-y1EQZqFlGCFn5r1TGtXA/exec';
 const CLAVE_API = 'tq_9f3K7xR2mZ8pL4vN6qWs1';
 const PRECIO_QUESO_EXTRA = 10;
 
@@ -52,6 +52,10 @@ export default function App() {
   const [mesaEnAccion, setMesaEnAccion] = useState(null);
   const [modalResumenAbierto, setModalResumenAbierto] = useState(false);
   const [cerrandoMesa, setCerrandoMesa] = useState(false);
+  const [modalCuentaAbierto, setModalCuentaAbierto] = useState(false);
+  const [detalleCuenta, setDetalleCuenta] = useState(null);
+  const [cargandoCuenta, setCargandoCuenta] = useState(false);
+  const [errorCuenta, setErrorCuenta] = useState('');
   // Candados para que un doble toque no mande la orden o la cuenta dos veces
   const enviandoRef = useRef(false);
   const cerrandoMesaRef = useRef(false);
@@ -214,6 +218,46 @@ export default function App() {
     setCategoriaActiva(categoriasProductos[0] || 'Tacos');
   }
 
+  async function verResumenCuenta(label) {
+    const activa = mesasActivas[label];
+    if (!activa) return;
+    setModalMesaOcupadaAbierto(false);
+    setModalCuentaAbierto(true);
+    setDetalleCuenta(null);
+    setErrorCuenta('');
+    setCargandoCuenta(true);
+    try {
+      const res = await fetch(`${API_URL}?accion=detalleOrden&orden_id=${encodeURIComponent(activa.ordenId)}&clave_api=${CLAVE_API}`);
+      const data = await res.json();
+      if (!data || data.error || !Array.isArray(data.items)) {
+        setErrorCuenta(data && data.error ? data.error : 'No se pudo cargar la cuenta');
+      } else {
+        setDetalleCuenta(data);
+      }
+    } catch (err) {
+      setErrorCuenta('Error de conexión, intenta de nuevo');
+      console.error(err);
+    } finally {
+      setCargandoCuenta(false);
+    }
+  }
+
+  // Agrupa los productos de la cuenta por cliente ("Cliente 2: sin verdura" -> grupo 2, nota "sin verdura")
+  function agruparCuentaPorCliente(items) {
+    const regex = /^Cliente\s+(\d+)\s*(?::\s*(.*))?$/i;
+    const grupos = [];
+    (items || []).forEach(item => {
+      const m = String(item.notas || '').match(regex);
+      const cliente = m ? m[1] : null;
+      const nota = m ? (m[2] || '') : (item.notas || '');
+      let g = grupos.find(x => x.cliente === cliente);
+      if (!g) { g = { cliente, items: [], total: 0 }; grupos.push(g); }
+      g.items.push({ ...item, nota });
+      g.total += Number(item.subtotal) || 0;
+    });
+    return grupos;
+  }
+
   async function imprimirYCerrarMesa(label) {
     const activa = mesasActivas[label];
     if (!activa) return;
@@ -228,6 +272,7 @@ export default function App() {
       });
       alert(`Cuenta de ${label}: $${activa.total}\nSe está imprimiendo la cuenta.`);
       setModalMesaOcupadaAbierto(false);
+      setModalCuentaAbierto(false);
       cargarMesasActivas();
       if (mesa === label) {
         setMesa(null);
@@ -963,6 +1008,12 @@ export default function App() {
                 Agregar productos
               </button>
               <button
+                onClick={() => verResumenCuenta(mesaEnAccion)}
+                style={{ padding: 12, borderRadius: 8, border: '2px solid #2b7a3f', background: '#fff', color: '#2b7a3f', fontWeight: 600 }}
+              >
+                Resumen de cuenta
+              </button>
+              <button
                 onClick={() => imprimirYCerrarMesa(mesaEnAccion)}
                 disabled={cerrandoMesa}
                 style={{ padding: 12, borderRadius: 8, border: 'none', background: '#b5651d', color: '#fff', opacity: cerrandoMesa ? 0.6 : 1 }}
@@ -974,6 +1025,72 @@ export default function App() {
                 style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd', background: '#fff' }}
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalCuentaAbierto && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: movil ? 16 : 20, maxWidth: 420, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontWeight: 600, fontSize: 17 }}>Resumen de cuenta · {mesaEnAccion}</div>
+              <button onClick={() => setModalCuentaAbierto(false)} style={{ border: 'none', background: 'none', fontSize: 20, color: '#666' }}>✕</button>
+            </div>
+
+            {cargandoCuenta && (
+              <div style={{ fontSize: 14, color: '#666', padding: '16px 0', textAlign: 'center' }}>Cargando cuenta...</div>
+            )}
+
+            {errorCuenta && (
+              <div style={{ fontSize: 14, color: '#c0392b', padding: '12px 0', textAlign: 'center' }}>{errorCuenta}</div>
+            )}
+
+            {detalleCuenta && (
+              <>
+                {detalleCuenta.items.length === 0 && (
+                  <div style={{ fontSize: 14, color: '#999', padding: '8px 0' }}>Esta cuenta no tiene productos.</div>
+                )}
+                {agruparCuentaPorCliente(detalleCuenta.items).map((grupo, idx) => (
+                  <div key={idx} style={{ marginBottom: 12, background: '#fafafa', borderRadius: 8, padding: 10 }}>
+                    {grupo.cliente && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14, marginBottom: 6 }}>
+                        <span>Cliente {grupo.cliente}</span>
+                        <span>${grupo.total}</span>
+                      </div>
+                    )}
+                    {grupo.items.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '6px 0', borderBottom: '1px solid #eee', fontSize: 15 }}>
+                        <span style={{ minWidth: 0 }}>
+                          {item.cantidad} x {item.nombre}
+                          {item.nota && <div style={{ fontSize: 12, color: '#888' }}>{item.nota}</div>}
+                        </span>
+                        <span style={{ whiteSpace: 'nowrap' }}>${item.subtotal}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '2px solid #333', display: 'flex', justifyContent: 'space-between', fontSize: 18 }}>
+                  <span>Total</span>
+                  <strong>${detalleCuenta.total}</strong>
+                </div>
+              </>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+              <button
+                onClick={() => imprimirYCerrarMesa(mesaEnAccion)}
+                disabled={cerrandoMesa || cargandoCuenta || !detalleCuenta}
+                style={{ padding: 12, borderRadius: 8, border: 'none', background: '#b5651d', color: '#fff', opacity: (cerrandoMesa || cargandoCuenta || !detalleCuenta) ? 0.6 : 1 }}
+              >
+                {cerrandoMesa ? 'Imprimiendo...' : 'Imprimir cuenta'}
+              </button>
+              <button
+                onClick={() => { setModalCuentaAbierto(false); setModalMesaOcupadaAbierto(true); }}
+                style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd', background: '#fff' }}
+              >
+                Volver
               </button>
             </div>
           </div>
