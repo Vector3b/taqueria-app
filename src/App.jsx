@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbziH_igDH8yL33JhUWP63Gi6-ob_PQlO3ObkaltkeV2w9IwjJj6la4NAEYDUFs6b8vYaA/exec';
 const CLAVE_API = 'tq_9f3K7xR2mZ8pL4vN6qWs1';
@@ -51,6 +51,10 @@ export default function App() {
   const [modalMesaOcupadaAbierto, setModalMesaOcupadaAbierto] = useState(false);
   const [mesaEnAccion, setMesaEnAccion] = useState(null);
   const [modalResumenAbierto, setModalResumenAbierto] = useState(false);
+  const [cerrandoMesa, setCerrandoMesa] = useState(false);
+  // Candados para que un doble toque no mande la orden o la cuenta dos veces
+  const enviandoRef = useRef(false);
+  const cerrandoMesaRef = useRef(false);
 
   function hoyString() {
     const d = new Date();
@@ -213,13 +217,16 @@ export default function App() {
   async function imprimirYCerrarMesa(label) {
     const activa = mesasActivas[label];
     if (!activa) return;
+    if (cerrandoMesaRef.current) return; // ya se esta mandando: ignorar toques extra
+    cerrandoMesaRef.current = true;
+    setCerrandoMesa(true);
     try {
       await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ accion: 'cerrarMesa', orden_id: activa.ordenId, clave_api: CLAVE_API })
       });
-      alert(`Cuenta de ${label}: $${activa.total}\n(La impresora térmica se conectará en el siguiente paso)`);
+      alert(`Cuenta de ${label}: $${activa.total}\nSe está imprimiendo la cuenta.`);
       setModalMesaOcupadaAbierto(false);
       cargarMesasActivas();
       if (mesa === label) {
@@ -229,6 +236,9 @@ export default function App() {
     } catch (err) {
       alert('Error al cerrar la mesa');
       console.error(err);
+    } finally {
+      cerrandoMesaRef.current = false;
+      setCerrandoMesa(false);
     }
   }
 
@@ -437,6 +447,8 @@ export default function App() {
 
   async function enviarOrden() {
     if (ordenVacia || faltaMesa) return;
+    if (enviandoRef.current) return; // ya se esta enviando: ignorar toques extra
+    enviandoRef.current = true;
     setEnviando(true);
     try {
       const todosLosItems = [
@@ -503,6 +515,7 @@ export default function App() {
       alert('Error al enviar la orden');
       console.error(err);
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
     }
   }
@@ -927,7 +940,7 @@ export default function App() {
             <button
               onClick={enviarOrden}
               disabled={enviando || ordenVacia || faltaMesa}
-              style={{ width: '100%', marginTop: 12, padding: 14, fontSize: 16, background: '#2b7a3f', color: '#fff', border: 'none', borderRadius: 8, opacity: (ordenVacia || faltaMesa) ? 0.6 : 1 }}
+              style={{ width: '100%', marginTop: 12, padding: 14, fontSize: 16, background: '#2b7a3f', color: '#fff', border: 'none', borderRadius: 8, opacity: (enviando || ordenVacia || faltaMesa) ? 0.6 : 1 }}
             >
               {enviando ? 'Enviando...' : (ordenIdActivo ? 'Agregar a la cuenta' : 'Enviar orden')}
             </button>
@@ -951,9 +964,10 @@ export default function App() {
               </button>
               <button
                 onClick={() => imprimirYCerrarMesa(mesaEnAccion)}
-                style={{ padding: 12, borderRadius: 8, border: 'none', background: '#b5651d', color: '#fff' }}
+                disabled={cerrandoMesa}
+                style={{ padding: 12, borderRadius: 8, border: 'none', background: '#b5651d', color: '#fff', opacity: cerrandoMesa ? 0.6 : 1 }}
               >
-                Imprimir cuenta
+                {cerrandoMesa ? 'Imprimiendo...' : 'Imprimir cuenta'}
               </button>
               <button
                 onClick={() => setModalMesaOcupadaAbierto(false)}
