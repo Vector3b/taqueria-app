@@ -4,7 +4,19 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbziH_igDH8yL33JhUWP63Gi
 const CLAVE_API = 'tq_9f3K7xR2mZ8pL4vN6qWs1';
 const PRECIO_QUESO_EXTRA = 10;
 
+// Detecta si la pantalla es de telefono (angosta) para acomodar la app
+function useEsMovil() {
+  const [esMovil, setEsMovil] = useState(() => window.innerWidth < 600);
+  useEffect(() => {
+    const revisar = () => setEsMovil(window.innerWidth < 600);
+    window.addEventListener('resize', revisar);
+    return () => window.removeEventListener('resize', revisar);
+  }, []);
+  return esMovil;
+}
+
 export default function App() {
+  const movil = useEsMovil();
   const [autenticado, setAutenticado] = useState(() => sessionStorage.getItem('autenticado') === 'true');
   const [usuarioActivo, setUsuarioActivo] = useState(() => sessionStorage.getItem('usuarioActivo') || '');
   const [rolActivo, setRolActivo] = useState(() => sessionStorage.getItem('rolActivo') || '');
@@ -622,7 +634,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto', padding: 20, paddingBottom: 90, fontFamily: 'sans-serif', position: 'relative' }}>
+    <div style={{ maxWidth: 700, margin: '0 auto', padding: movil ? 12 : 20, paddingBottom: 100, fontFamily: 'sans-serif', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontSize: 13, color: '#666' }}>Sesión: {usuarioActivo}</span>
         <button onClick={cerrarSesion} style={{ fontSize: 12, border: 'none', background: 'none', color: '#c0392b' }}>Cerrar sesión</button>
@@ -634,14 +646,14 @@ export default function App() {
           : 'Selecciona una mesa antes de continuar'}
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#666', marginRight: 2 }}>Orden de:</span>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: movil ? 'nowrap' : 'wrap', overflowX: movil ? 'auto' : 'visible', alignItems: 'center', paddingBottom: movil ? 4 : 0 }}>
+        <span style={{ fontSize: 12, color: '#666', marginRight: 2, flexShrink: 0 }}>Orden de:</span>
         {comensales.map(num => (
           <button
             key={num}
             onClick={() => setComensalActivo(num)}
             style={{
-              padding: '6px 12px', fontSize: 13, borderRadius: 16,
+              padding: movil ? '8px 14px' : '6px 12px', fontSize: 13, borderRadius: 16, flexShrink: 0, whiteSpace: 'nowrap',
               border: comensalActivo === num ? '2px solid #333' : '1px solid #ccc',
               background: comensalActivo === num ? '#333' : '#fafafa',
               color: comensalActivo === num ? '#fff' : '#333'
@@ -652,19 +664,19 @@ export default function App() {
         ))}
         <button
           onClick={agregarNuevaOrden}
-          style={{ padding: '6px 12px', fontSize: 13, borderRadius: 16, border: '1px dashed #2b7a3f', background: '#fff', color: '#2b7a3f' }}
+          style={{ padding: movil ? '8px 14px' : '6px 12px', fontSize: 13, borderRadius: 16, border: '1px dashed #2b7a3f', background: '#fff', color: '#2b7a3f', flexShrink: 0, whiteSpace: 'nowrap' }}
         >
           + Nueva orden
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 6, paddingTop: 6, position: 'sticky', top: 0, background: '#fff', zIndex: 100 }}>
         {tabs.map(cat => (
           <button
             key={cat}
             onClick={() => setCategoriaActiva(cat)}
             style={{
-              flexShrink: 0, padding: '10px 16px', fontSize: 15,
+              flexShrink: 0, padding: movil ? '10px 14px' : '10px 16px', fontSize: 15,
               background: cat === categoriaActiva ? '#333' : '#eee',
               color: cat === categoriaActiva ? '#fff' : '#333',
               border: 'none', borderRadius: 8, whiteSpace: 'nowrap'
@@ -676,7 +688,7 @@ export default function App() {
       </div>
 
       {categoriaActiva === 'Mesa' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: movil ? 6 : 8 }}>
           {[1,2,3,4,5,6,7,8,9,10].map(num => {
             const label = 'Mesa ' + num;
             const activa = mesasActivas[label];
@@ -686,7 +698,7 @@ export default function App() {
                 key={num}
                 onClick={() => tocarMesa(label)}
                 style={{
-                  padding: 14, fontSize: 15, borderRadius: 8,
+                  padding: movil ? '16px 0' : 14, fontSize: movil ? 17 : 15, fontWeight: 600, borderRadius: 8,
                   border: esActual ? '2px solid #2b7a3f' : (activa ? '2px solid #1e5c2f' : '1px solid #ccc'),
                   background: esActual ? '#eaf5ec' : (activa ? '#2b7a3f' : '#fafafa'),
                   color: activa && !esActual ? '#fff' : '#333'
@@ -716,7 +728,7 @@ export default function App() {
           })()}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: movil ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: movil ? 8 : 10, alignItems: 'start' }}>
           {productosVisibles.map(producto => {
             const clave = claveItem(producto.id, comensalActivo);
             const cantidad = carrito[clave] || 0;
@@ -726,7 +738,7 @@ export default function App() {
               <div
                 key={producto.id}
                 onClick={() => sumar(producto)}
-                style={{ border: '1px solid #ddd', borderRadius: 10, padding: 12, textAlign: 'center', cursor: 'pointer', position: 'relative' }}
+                style={{ border: cantidad > 0 ? '2px solid #2b7a3f' : '1px solid #ddd', borderRadius: 10, padding: movil ? '14px 8px 10px' : 12, textAlign: 'center', cursor: 'pointer', position: 'relative', background: '#fff', minHeight: movil ? 72 : 'auto' }}
               >
                 {cantidad > 0 && (
                   <div style={{
@@ -737,7 +749,7 @@ export default function App() {
                     {cantidad}
                   </div>
                 )}
-                <div style={{ fontWeight: 600 }}>{producto.nombre}</div>
+                <div style={{ fontWeight: 600, fontSize: movil ? 15 : 16, paddingRight: cantidad > 0 ? 18 : 0, paddingLeft: cantidad > 0 ? 18 : 0, overflowWrap: 'anywhere' }}>{producto.nombre}</div>
                 <div style={{ color: '#666', fontSize: 14 }}>${producto.precio}</div>
 
                 {producto.categoria === 'Tortas' && cantidad > 0 && (
@@ -756,11 +768,11 @@ export default function App() {
 
                 {!esBebida && cantidad > 0 && (
                   <div onClick={e => e.stopPropagation()} style={{ marginTop: 8 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: movil ? '1fr' : '1fr 1fr', gap: movil ? 6 : 4 }}>
                       <button
                         onClick={() => toggleNota(clave, 'conVerdura')}
                         style={{
-                          fontSize: 11, padding: '6px 4px', borderRadius: 6,
+                          fontSize: movil ? 13 : 11, padding: movil ? '9px 4px' : '6px 4px', borderRadius: 6,
                           border: n.conVerdura ? '2px solid #b5651d' : '1px solid #ccc',
                           background: n.conVerdura ? '#fbe9d9' : '#fafafa'
                         }}
@@ -770,7 +782,7 @@ export default function App() {
                       <button
                         onClick={() => toggleNota(clave, 'sinVerdura')}
                         style={{
-                          fontSize: 11, padding: '6px 4px', borderRadius: 6,
+                          fontSize: movil ? 13 : 11, padding: movil ? '9px 4px' : '6px 4px', borderRadius: 6,
                           border: n.sinVerdura ? '2px solid #b5651d' : '1px solid #ccc',
                           background: n.sinVerdura ? '#fbe9d9' : '#fafafa'
                         }}
@@ -782,7 +794,7 @@ export default function App() {
                       onClick={() => pedirNotaLibre(clave)}
                       title="Agregar nota escrita"
                       style={{
-                        fontSize: 13, fontWeight: 600, padding: '4px 0', borderRadius: 6, width: '100%', marginTop: 4,
+                        fontSize: 13, fontWeight: 600, padding: movil ? '9px 4px' : '4px 0', borderRadius: 6, width: '100%', marginTop: movil ? 6 : 4, overflowWrap: 'anywhere',
                         border: n.libre ? '2px solid #2b7a3f' : '1px dashed #999',
                         background: n.libre ? '#eaf5ec' : '#fff', color: n.libre ? '#2b7a3f' : '#666'
                       }}
@@ -822,7 +834,7 @@ export default function App() {
           onClick={() => setModalResumenAbierto(true)}
           style={{
             position: 'fixed', bottom: 0, left: 0, right: 0, background: '#2b7a3f', color: '#fff',
-            padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: movil ? '14px 16px' : '14px 20px', paddingBottom: 'calc(14px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             cursor: 'pointer', boxShadow: '0 -2px 10px rgba(0,0,0,0.15)', zIndex: 500
           }}
         >
@@ -833,7 +845,7 @@ export default function App() {
 
       {modalResumenAbierto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: 20, maxWidth: 700, width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: movil ? 14 : 20, paddingBottom: 'calc(' + (movil ? 14 : 20) + 'px + env(safe-area-inset-bottom))', maxWidth: 700, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ fontWeight: 600, fontSize: 17 }}>Resumen de la orden {mesa ? `· ${mesa}` : ''}</div>
               <button onClick={() => setModalResumenAbierto(false)} style={{ border: 'none', background: 'none', fontSize: 20, color: '#666' }}>✕</button>
@@ -852,21 +864,21 @@ export default function App() {
 
               return (
                 <div key={numero} style={{ marginBottom: 14, background: '#fafafa', borderRadius: 8, padding: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 600, fontSize: 14 }}>Cliente {numero} · ${totalPorComensal(numero)}</span>
-                    <button onClick={() => eliminarOrdenComensal(numero)} style={{ border: 'none', background: 'none', color: '#c0392b', fontSize: 12 }}>Eliminar orden completa</button>
+                    <button onClick={() => eliminarOrdenComensal(numero)} style={{ border: 'none', background: 'none', color: '#c0392b', fontSize: 12, padding: '4px 0' }}>{movil ? 'Eliminar todo' : 'Eliminar orden completa'}</button>
                   </div>
 
                   {itemsDeEste.map(item => (
-                    <div key={item.clave} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #eee' }}>
-                      <span>
+                    <div key={item.clave} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: movil ? '8px 0' : '6px 0', borderBottom: '1px solid #eee', flexWrap: 'wrap', gap: 6 }}>
+                      <span style={{ flex: '1 1 150px', minWidth: 0 }}>
                         {item.producto.nombre} · ${item.subtotal}
                         {item.notas && <div style={{ fontSize: 12, color: '#888' }}>{item.notas}</div>}
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <button onClick={() => restarEnResumen(item.clave)} style={{ width: 24, height: 24 }}>-</button>
-                        <span>{item.cantidad}</span>
-                        <button onClick={() => sumarEnResumen(item.clave)} style={{ width: 24, height: 24 }}>+</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: movil ? 8 : 6, marginLeft: 'auto' }}>
+                        <button onClick={() => restarEnResumen(item.clave)} style={{ width: movil ? 34 : 24, height: movil ? 34 : 24, borderRadius: 6, border: '1px solid #ccc', background: '#fafafa', fontSize: movil ? 18 : 14, padding: 0 }}>-</button>
+                        <span style={{ minWidth: 18, textAlign: 'center' }}>{item.cantidad}</span>
+                        <button onClick={() => sumarEnResumen(item.clave)} style={{ width: movil ? 34 : 24, height: movil ? 34 : 24, borderRadius: 6, border: '1px solid #ccc', background: '#fafafa', fontSize: movil ? 18 : 14, padding: 0 }}>+</button>
                         <button onClick={() => quitarRegular(item.clave)} style={{ border: 'none', background: 'none', color: '#c0392b', marginLeft: 2, fontSize: 12 }}>Eliminar</button>
                       </div>
                     </div>
@@ -877,23 +889,23 @@ export default function App() {
                     const cantidad = grupo.idLineas.length;
                     const precioUnitario = c.producto.precio + (c.conQueso ? PRECIO_QUESO_EXTRA : 0);
                     return (
-                      <div key={grupo.firma} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #eee' }}>
-                        <span>
+                      <div key={grupo.firma} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: movil ? '8px 0' : '6px 0', borderBottom: '1px solid #eee', flexWrap: 'wrap', gap: 6 }}>
+                        <span style={{ flex: '1 1 150px', minWidth: 0 }}>
                           {c.producto.nombre}: {c.carnes.join(' + ')}{c.conQueso ? ' + queso' : ''} · ${precioUnitario * cantidad}
                           {c.notasExtra && <div style={{ fontSize: 12, color: '#888' }}>{c.notasExtra}</div>}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <button onClick={() => quitarCombo(grupo.idLineas[grupo.idLineas.length - 1])} style={{ width: 24, height: 24 }}>-</button>
-                          <span>{cantidad}</span>
-                          <button onClick={() => duplicarCombo(grupo.idLineas[0])} style={{ width: 24, height: 24 }}>+</button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: movil ? 8 : 6, marginLeft: 'auto' }}>
+                          <button onClick={() => quitarCombo(grupo.idLineas[grupo.idLineas.length - 1])} style={{ width: movil ? 34 : 24, height: movil ? 34 : 24, borderRadius: 6, border: '1px solid #ccc', background: '#fafafa', fontSize: movil ? 18 : 14, padding: 0 }}>-</button>
+                          <span style={{ minWidth: 18, textAlign: 'center' }}>{cantidad}</span>
+                          <button onClick={() => duplicarCombo(grupo.idLineas[0])} style={{ width: movil ? 34 : 24, height: movil ? 34 : 24, borderRadius: 6, border: '1px solid #ccc', background: '#fafafa', fontSize: movil ? 18 : 14, padding: 0 }}>+</button>
                         </div>
                       </div>
                     );
                   })}
 
                   {especialesDeEste.map(e => (
-                    <div key={e.idLinea} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #eee' }}>
-                      <span>{e.producto.nombre}: consomé + taco de {e.taco} · ${e.producto.precio}</span>
+                    <div key={e.idLinea} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: movil ? '8px 0' : '6px 0', borderBottom: '1px solid #eee', flexWrap: 'wrap', gap: 6 }}>
+                      <span style={{ flex: '1 1 150px', minWidth: 0 }}>{e.producto.nombre}: consomé + taco de {e.taco} · ${e.producto.precio}</span>
                       <button onClick={() => quitarEspecial(e.idLinea)} style={{ border: 'none', background: 'none', color: '#c0392b', fontSize: 12 }}>Eliminar</button>
                     </div>
                   ))}
@@ -924,7 +936,7 @@ export default function App() {
       )}
 
       {modalMesaOcupadaAbierto && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 20, maxWidth: 360, width: '100%' }}>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>{mesaEnAccion} tiene una orden activa</div>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>
@@ -958,8 +970,8 @@ export default function App() {
         const claveCombo = 'combo-' + productoCombinado?.id + '__' + comensalActivo;
         const nCombo = notasProducto[claveCombo] || {};
         return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 20, maxWidth: 400, width: '100%' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: movil ? 16 : 20, maxWidth: 400, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>Elige 2 carnes para tu {productoCombinado?.nombre}</div>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
               Para: Cliente {comensalActivo} · Seleccionadas: {carnesSeleccionadas.length}/2
@@ -972,7 +984,7 @@ export default function App() {
                     key={carne.id}
                     onClick={() => toggleCarneSeleccionada(carne.nombre)}
                     style={{
-                      padding: 10, borderRadius: 8,
+                      padding: movil ? 12 : 10, borderRadius: 8,
                       border: seleccionada ? '2px solid #2b7a3f' : '1px solid #ddd',
                       background: seleccionada ? '#eaf5ec' : '#fff'
                     }}
@@ -994,11 +1006,11 @@ export default function App() {
             )}
 
             <div style={{ marginTop: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: movil ? '1fr' : '1fr 1fr', gap: movil ? 6 : 4 }}>
                 <button
                   onClick={() => toggleNota(claveCombo, 'conVerdura')}
                   style={{
-                    fontSize: 11, padding: '6px 4px', borderRadius: 6,
+                    fontSize: movil ? 13 : 11, padding: movil ? '9px 4px' : '6px 4px', borderRadius: 6,
                     border: nCombo.conVerdura ? '2px solid #b5651d' : '1px solid #ccc',
                     background: nCombo.conVerdura ? '#fbe9d9' : '#fafafa'
                   }}
@@ -1008,7 +1020,7 @@ export default function App() {
                 <button
                   onClick={() => toggleNota(claveCombo, 'sinVerdura')}
                   style={{
-                    fontSize: 11, padding: '6px 4px', borderRadius: 6,
+                    fontSize: movil ? 13 : 11, padding: movil ? '9px 4px' : '6px 4px', borderRadius: 6,
                     border: nCombo.sinVerdura ? '2px solid #b5651d' : '1px solid #ccc',
                     background: nCombo.sinVerdura ? '#fbe9d9' : '#fafafa'
                   }}
@@ -1020,7 +1032,7 @@ export default function App() {
                 onClick={() => pedirNotaLibre(claveCombo)}
                 title="Agregar nota escrita"
                 style={{
-                  fontSize: 13, fontWeight: 600, padding: '4px 0', borderRadius: 6, width: '100%', marginTop: 4,
+                  fontSize: 13, fontWeight: 600, padding: movil ? '9px 4px' : '4px 0', borderRadius: 6, width: '100%', marginTop: movil ? 6 : 4, overflowWrap: 'anywhere',
                   border: nCombo.libre ? '2px solid #2b7a3f' : '1px dashed #999',
                   background: nCombo.libre ? '#eaf5ec' : '#fff', color: nCombo.libre ? '#2b7a3f' : '#666'
                 }}
@@ -1050,8 +1062,8 @@ export default function App() {
       })()}
 
       {modalEspecialAbierto && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 20, maxWidth: 400, width: '100%' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: movil ? 16 : 20, maxWidth: 400, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>{productoEspecial?.nombre}</div>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
               Para: Cliente {comensalActivo} · Incluye consomé regular. Elige tu taco:
@@ -1064,7 +1076,7 @@ export default function App() {
                     key={taco.id}
                     onClick={() => setTacoElegido(taco.nombre)}
                     style={{
-                      padding: 10, borderRadius: 8,
+                      padding: movil ? 12 : 10, borderRadius: 8,
                       border: seleccionado ? '2px solid #b5651d' : '1px solid #ddd',
                       background: seleccionado ? '#fbe9d9' : '#fff'
                     }}
