@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbwNfZhDTvvRh_Wmar9D7hZ_BfJtTQHbFuivN2wh3auLHD11x-y1EQZqFlGCFn5r1TGtXA/exec';
+const GOOGLE_URL = 'https://script.google.com/macros/s/AKfycbwNfZhDTvvRh_Wmar9D7hZ_BfJtTQHbFuivN2wh3auLHD11x-y1EQZqFlGCFn5r1TGtXA/exec';
+// Si la app se abre desde Vercel (internet) habla con Google; si se abre desde la Pi del local, habla con la Pi.
+const EN_PI = !window.location.hostname.endsWith('vercel.app');
+const API_URL = EN_PI ? '/api' : GOOGLE_URL;
 const CLAVE_API = 'tq_9f3K7xR2mZ8pL4vN6qWs1';
 const PRECIO_QUESO_EXTRA = 10;
+// Partes que se pueden pedir en los productos de cabeza (tacos, quesadilla y torta). Para agregar o quitar, edita esta lista.
+const PARTES_CABEZA = ['Maciza', 'Lengua', 'Ojo', 'Sesos', 'Cachete', 'Trompa'];
+const esCabeza = nombre => String(nombre).toLowerCase().includes('cabeza');
 
 // Detecta si la pantalla es de telefono (angosta) para acomodar la app
 function useEsMovil() {
@@ -52,6 +58,7 @@ export default function App() {
   const [mesaEnAccion, setMesaEnAccion] = useState(null);
   const [modalResumenAbierto, setModalResumenAbierto] = useState(false);
   const [cerrandoMesa, setCerrandoMesa] = useState(false);
+  const [estadoPi, setEstadoPi] = useState(null);
   const [modalCuentaAbierto, setModalCuentaAbierto] = useState(false);
   const [detalleCuenta, setDetalleCuenta] = useState(null);
   const [cargandoCuenta, setCargandoCuenta] = useState(false);
@@ -75,6 +82,21 @@ export default function App() {
       .catch(err => console.error('Error cargando productos:', err));
     cargarMesasActivas();
   }, []);
+
+  // Solo cuando la app corre en la Pi: revisa cada 10 s si la impresora y el internet estan bien
+  useEffect(() => {
+    if (!EN_PI || !autenticado) return;
+    let activo = true;
+    const revisar = () => {
+      fetch(`${API_URL}?accion=estado&clave_api=${CLAVE_API}`)
+        .then(r => r.json())
+        .then(d => { if (activo) setEstadoPi(d); })
+        .catch(() => { if (activo) setEstadoPi({ sinConexionPi: true }); });
+    };
+    revisar();
+    const id = setInterval(revisar, 10000);
+    return () => { activo = false; clearInterval(id); };
+  }, [autenticado]);
 
   useEffect(() => {
     if (autenticado && rolActivo === 'admin') {
@@ -265,11 +287,13 @@ export default function App() {
     cerrandoMesaRef.current = true;
     setCerrandoMesa(true);
     try {
-      await fetch(API_URL, {
+      const resCerrar = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ accion: 'cerrarMesa', orden_id: activa.ordenId, clave_api: CLAVE_API })
       });
+      const dataCerrar = await resCerrar.json().catch(() => ({}));
+      if (dataCerrar.error) { alert(dataCerrar.error); return; }
       alert(`Cuenta de ${label}: $${activa.total}\nSe está imprimiendo la cuenta.`);
       setModalMesaOcupadaAbierto(false);
       setModalCuentaAbierto(false);
@@ -388,9 +412,22 @@ export default function App() {
     }));
   }
 
+  function cambiarParteCabeza(clave, parte, delta) {
+    setNotasProducto(prev => {
+      const n = prev[clave] || {};
+      const partesCabeza = { ...(n.partesCabeza || {}) };
+      const valor = Math.max(0, (partesCabeza[parte] || 0) + delta);
+      if (valor) partesCabeza[parte] = valor; else delete partesCabeza[parte];
+      return { ...prev, [clave]: { ...n, partesCabeza } };
+    });
+  }
+
   function construirNotas(clave, conQueso) {
     const n = notasProducto[clave] || {};
     const partes = [];
+    if (n.partesCabeza) {
+      PARTES_CABEZA.forEach(p => { if (n.partesCabeza[p]) partes.push(`${n.partesCabeza[p]} ${p.toLowerCase()}`); });
+    }
     if (n.conVerdura) partes.push('con verdura');
     if (n.sinVerdura) partes.push('sin verdura');
     if (conQueso) partes.push('queso extra');
@@ -517,8 +554,9 @@ export default function App() {
         }))
       ];
 
+      let respuesta;
       if (ordenIdActivo) {
-        await fetch(API_URL, {
+        respuesta = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
@@ -530,7 +568,7 @@ export default function App() {
           })
         });
       } else {
-        await fetch(API_URL, {
+        respuesta = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
@@ -542,6 +580,12 @@ export default function App() {
             clave_api: CLAVE_API
           })
         });
+      }
+      const dataEnvio = await respuesta.json().catch(() => ({}));
+      if (dataEnvio.error) {
+        alert('No se pudo enviar: ' + dataEnvio.error);
+        cargarMesasActivas();
+        return;
       }
 
       setCarrito({});
@@ -698,6 +742,20 @@ export default function App() {
         <button onClick={cerrarSesion} style={{ fontSize: 12, border: 'none', background: 'none', color: '#c0392b' }}>Cerrar sesión</button>
       </div>
 
+      {EN_PI && estadoPi && (estadoPi.sinConexionPi ? (
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, padding: '10px 12px', borderRadius: 8, background: '#c0392b', color: '#fff' }}>
+          ⚠ Sin conexión con la Pi. Revisa el WiFi del local.
+        </div>
+      ) : (!estadoPi.impresora_ok || estadoPi.segundos_ticket_mas_viejo > 60) ? (
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, padding: '10px 12px', borderRadius: 8, background: '#c0392b', color: '#fff' }}>
+          ⚠ La impresora no está imprimiendo ({estadoPi.tickets_pendientes} ticket{estadoPi.tickets_pendientes !== 1 ? 's' : ''} en espera). Revisa papel, que esté encendida y el cable de red.
+        </div>
+      ) : !estadoPi.google_ok ? (
+        <div style={{ fontSize: 12, marginBottom: 8, padding: '6px 10px', borderRadius: 8, background: '#fff4e0', color: '#8a5a00' }}>
+          Sin internet: las órdenes se imprimen normal y se subirán a Google cuando regrese.
+        </div>
+      ) : null)}
+
       <div style={{ fontSize: 13, marginBottom: 8, padding: '8px 10px', borderRadius: 8, background: mesa ? '#eaf5ec' : '#fbe9d9', color: mesa ? '#2b7a3f' : '#b5651d' }}>
         {mesa
           ? (ordenIdActivo ? `Agregando productos a la cuenta activa de: ${mesa}` : `Tomando orden nueva para: ${mesa}`)
@@ -823,6 +881,31 @@ export default function App() {
                     Extra queso (+${PRECIO_QUESO_EXTRA})
                   </label>
                 )}
+
+                {esCabeza(producto.nombre) && cantidad > 0 && (() => {
+                  const partesSel = n.partesCabeza || {};
+                  const asignadas = Object.values(partesSel).reduce((a, b) => a + b, 0);
+                  return (
+                    <div onClick={e => e.stopPropagation()} style={{ marginTop: 8, padding: 6, borderRadius: 8, background: '#f6f6f6', textAlign: 'left' }}>
+                      <div style={{ fontSize: 12, color: asignadas > cantidad ? '#c0392b' : '#666', marginBottom: 4, textAlign: 'center' }}>
+                        Partes: {asignadas} de {cantidad}
+                      </div>
+                      {PARTES_CABEZA.map(parte => {
+                        const v = partesSel[parte] || 0;
+                        return (
+                          <div key={parte} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, padding: '2px 0' }}>
+                            <span style={{ fontSize: movil ? 13 : 12, fontWeight: v ? 600 : 400, color: v ? '#b5651d' : '#333' }}>{parte}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <button onClick={() => cambiarParteCabeza(clave, parte, -1)} style={{ width: movil ? 30 : 24, height: movil ? 30 : 24, borderRadius: 6, border: '1px solid #ccc', background: '#fff', padding: 0, fontSize: 16 }}>-</button>
+                              <span style={{ minWidth: 14, textAlign: 'center', fontSize: 13 }}>{v}</span>
+                              <button onClick={() => cambiarParteCabeza(clave, parte, 1)} style={{ width: movil ? 30 : 24, height: movil ? 30 : 24, borderRadius: 6, border: '1px solid #ccc', background: '#fff', padding: 0, fontSize: 16 }}>+</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 {!esBebida && cantidad > 0 && (
                   <div onClick={e => e.stopPropagation()} style={{ marginTop: 8 }}>
